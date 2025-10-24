@@ -132,7 +132,7 @@ public class DaoImplFile implements Dao{
 				pw.write(firstLine.toString());
 				fw.write("\n");				
 				
-				// increment counter sales
+				// increment counter product
 				counter++;
 				
 			}
