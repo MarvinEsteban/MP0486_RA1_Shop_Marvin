@@ -5,7 +5,7 @@ import model.Sale;
 import model.Amount;
 import model.Client;
 import model.Employee;
-
+import dao.DaoImplFile;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -21,11 +21,12 @@ public class Shop {
 	private Amount cash = new Amount(100.00);
 //	private Product[] inventory;
 	private ArrayList<Product> inventory;
+	private static ArrayList<Product> products;
 	private int numberProducts;
 //	private Sale[] sales;
 	private ArrayList<Sale> sales;
 	private int numberSales;
-
+	private static DaoImplFile daoFile = new DaoImplFile();
 	final static double TAX_RATE = 1.04;
 
 	public Shop() {
@@ -97,10 +98,16 @@ public class Shop {
 
 	public static void main(String[] args) {
 		Shop shop = new Shop();
-
+		
 		// load inventory from external data
 		shop.loadInventory();
-		
+		products = daoFile.getInventory();
+		boolean success = daoFile.writeInventory(products);
+		if(success) {
+			System.out.println("Inventario escrito correctamente.");
+		}else {
+			System.out.println("Error al escribir en el archivo.");
+		}
 		// init session as employee
 		shop.initSession();
 
@@ -144,7 +151,8 @@ public class Shop {
 				break;
 
 			case 5:
-				shop.showInventory();
+				System.out.println(daoFile.getInventory());
+				
 				break;
 
 			case 6:
