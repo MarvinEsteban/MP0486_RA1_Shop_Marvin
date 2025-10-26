@@ -1,4 +1,2 @@
 1;Product:Manzana;Price:20,00€;Stock:10
-2;Product:Pera;Price:40,00€;Stock:20
-3;Product:Hamburguesa;Price:60,00€;Stock:30
-4;Product:Fresa;Price:10,00€;Stock:20
+2;Product:Fresa;Price:10,00€;Stock:20
