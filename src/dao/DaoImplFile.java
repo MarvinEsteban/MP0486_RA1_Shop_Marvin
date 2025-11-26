@@ -109,42 +109,56 @@ public class DaoImplFile implements Dao{
 		return products;
 	}
 
-	@Override
 	public boolean writeInventory(ArrayList<Product> products) {		
 		// define file name based on date
 		LocalDate myObj = LocalDate.now();
 		String fileName = "inventory_" + myObj.toString() + ".txt";
-		
-		// locate file, path and name
+	
 		File f = new File(System.getProperty("user.dir") + File.separator + "files" + File.separator + fileName);
 				
 		try {
-			// wrap in proper classes
-			FileWriter fw;
-			fw = new FileWriter(f, true);
+			FileWriter fw = new FileWriter(f); 
 			PrintWriter pw = new PrintWriter(fw);
 			
-			// write line by line
-			int counter=1;
+			int counter = 1;
 			for (Product product : products) {				
-				// format first line TO BE -> 1;Client=PERE;Date=29-02-2024 12:49:50;
-				StringBuilder firstLine = new StringBuilder(counter+";Product:"+ product.getName() + ";Price:" + product.getPublicPrice() + ";Stock:" + product.getStock() );
-				pw.write(firstLine.toString());
-				fw.write("\n");				
-				
-				// increment counter product
+				StringBuilder line = new StringBuilder(
+				    counter + 
+				    ";Product:" + product.getName() + 
+				    ";Stock:" + product.getStock() + 
+				    ";" 
+				);
+				pw.println(line.toString());
 				counter++;
-				
 			}
-			// close files
+			pw.println("Total number of products:" + products.size() + ";");
+			
 			pw.close();
 			fw.close();
 			
 		} catch (IOException e) {
 			e.printStackTrace();
-			return false;
+			return false; 
 		}
-		return true;
+		return true; 
+	}
+
+	@Override
+	public Product addProduct(Product product) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Product updateProduct(Product product) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public int deleteProduct(int id) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 }

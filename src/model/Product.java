@@ -7,26 +7,39 @@ public class Product {
     private Amount wholesalerPrice;
     private boolean available;
     private int stock;
-    private static int totalProducts;
+    
+    // Eliminada la variable estática totalProducts.
     
     public final static double EXPIRATION_RATE=0.60;
     
 	public Product(String name, Amount wholesalerPrice, boolean available, int stock) {
 		super();
-		this.id = totalProducts+1;
+		// El ID se inicializa a 0, será asignado por la base de datos (AUTO_INCREMENT) 
+		// y actualizado por el DAO al momento de la inserción.
+		this.id = 0; 
 		this.name = name;
 		this.wholesalerPrice = wholesalerPrice;
+		// El precio público sigue calculándose basado en el precio mayorista.
 		this.publicPrice = new Amount(wholesalerPrice.getValue() * 2);
 		this.available = available;
 		this.stock = stock;
-		totalProducts++;
+		// Eliminada la línea totalProducts++;
 	}
 
+    // Constructor opcional para usar al leer de la base de datos (si no lo tienes, añádelo)
+    /*
+    public Product(int id, String name, Amount wholesalerPrice, boolean available, int stock) {
+        this(name, wholesalerPrice, available, stock);
+        this.id = id;
+    }
+    */
+    
 	public int getId() {
 		return id;
 	}
 
 	public void setId(int id) {
+		// Este setter es crucial para que el DAO pueda asignar el ID generado por MySQL
 		this.id = id;
 	}
 
@@ -72,13 +85,7 @@ public class Product {
 		this.stock = stock;
 	}
 
-	public static int getTotalProducts() {
-		return totalProducts;
-	}
-
-	public static void setTotalProducts(int totalProducts) {
-		Product.totalProducts = totalProducts;
-	}
+	// ELIMINADOS: getTotalProducts() y setTotalProducts()
 	
 	public void expire() {
 		this.publicPrice.setValue(this.getPublicPrice().getValue()*EXPIRATION_RATE); ;
@@ -86,17 +93,8 @@ public class Product {
 
 	@Override
 	public String toString() {
-		return "Product [name=" + name + ", publicPrice=" + publicPrice + ", wholesalerPrice=" + wholesalerPrice
+		return "Product [id=" + id + ", name=" + name + ", publicPrice=" + publicPrice + ", wholesalerPrice=" + wholesalerPrice
 				+ ", available=" + available + ", stock=" + stock + "]";
 	}
-
-	
-	
-	
-	
-	
-
-    
-
     
 }

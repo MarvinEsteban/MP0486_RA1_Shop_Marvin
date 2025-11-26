@@ -21,7 +21,6 @@ public class Shop {
 	private Amount cash = new Amount(100.00);
 //	private Product[] inventory;
 	private ArrayList<Product> inventory;
-	private static ArrayList<Product> products;
 	private int numberProducts;
 //	private Sale[] sales;
 	private ArrayList<Sale> sales;
@@ -79,7 +78,9 @@ public class Shop {
 		Shop shop = new Shop();
 
 		// load inventory from external data
+		
 		shop.loadInventory();
+		System.out.println("\nDatos de inventario cargados correctamente.");
 		// init session as employee
 		shop.initSession();
 
@@ -180,10 +181,10 @@ public class Shop {
 	 * load initial inventory to shop
 	 */
 	public void loadInventory() {
-		addProduct(new Product("Manzana", new Amount(10.00), true, 10));
-		addProduct(new Product("Pera", new Amount(20.00), true, 20));
-		addProduct(new Product("Hamburguesa", new Amount(30.00), true, 30));
-		addProduct(new Product("Fresa", new Amount(5.00), true, 20));
+//		addProduct(new Product("Manzana", new Amount(10.00), true, 10));
+//		addProduct(new Product("Pera", new Amount(20.00), true, 20));
+//		addProduct(new Product("Hamburguesa", new Amount(30.00), true, 30));
+//		addProduct(new Product("Fresa", new Amount(5.00), true, 20));
 		this.readInventory();
 	}
 
