@@ -5,11 +5,9 @@ import model.Sale;
 import model.Amount;
 import model.Client;
 import model.Employee;
-import dao.DaoImplFile;
-import java.io.BufferedReader;
+import dao.Dao; // Importamos la interfaz
+import dao.DaoImplJDBC; // Importamos la implementación JDBC
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -25,13 +23,18 @@ public class Shop {
 //	private Sale[] sales;
 	private ArrayList<Sale> sales;
 	private int numberSales;
-	private DaoImplFile dao;
+	// Atributo sustituido de File a interface dao
+	private Dao dao; 
+	
 	final static double TAX_RATE = 1.04;
 
 	public Shop() {
 		inventory = new ArrayList<Product>();
 		sales = new ArrayList<Sale>();
-		dao = new DaoImplFile();
+		
+		// Inicializar con la implementación JDBC
+		dao = new DaoImplJDBC(); 
+		dao.connect(); 
 	}
 
 	public Amount getCash() {
@@ -80,7 +83,8 @@ public class Shop {
 		// load inventory from external data
 		
 		shop.loadInventory();
-		System.out.println("\nDatos de inventario cargados correctamente.");
+		System.out.println("\n✅ Datos de inventario cargados correctamente.");
+		
 		// init session as employee
 		shop.initSession();
 
@@ -93,6 +97,7 @@ public class Shop {
 			System.out.println("===========================");
 			System.out.println("Menu principal miTienda.com");
 			System.out.println("===========================");
+			System.out.println("0) Exportar Inventario Histórico"); // OPCIÓN AGREGADA
 			System.out.println("1) Contar caja");
 			System.out.println("2) Añadir producto");
 			System.out.println("3) Añadir stock");
@@ -104,9 +109,26 @@ public class Shop {
 			System.out.println("9) Eliminar producto");
 			System.out.println("10) Salir programa");
 			System.out.print("Seleccione una opción: ");
-			opcion = scanner.nextInt();
+			
+			// MANEJO DE ENTRADA ROBUSTO (CORRECCIÓN)
+			if (scanner.hasNextInt()) {
+			    opcion = scanner.nextInt();
+			} else {
+			    System.out.println("Opción inválida. Intente de nuevo.");
+			    scanner.next(); 
+			    continue; 
+			}
+			
 
 			switch (opcion) {
+			case 0: // CASE PARA EXPORTAR HISTORIAL
+				boolean success = shop.writeInventory();
+				if (success) {
+					System.out.println("✅ Inventario exportado correctamente a 'historical_inventory'.");
+				} else {
+					System.out.println("❌ ERROR al exportar el inventario a la base de datos.");
+				}
+				break;
 			case 1:
 				shop.showCash();
 				break;
@@ -124,7 +146,7 @@ public class Shop {
 				break;
 
 			case 5:
-				shop.readInventory();
+				shop.showInventory(); 
 				break;
 
 			case 6:
@@ -150,7 +172,10 @@ public class Shop {
 			}
 
 		} while (!exit);
-
+		
+		// Desconexión de la base de datos al salir
+		shop.dao.disconnect(); 
+		scanner.close(); // Cerrar el scanner
 	}
 
 	private void initSession() {
@@ -162,10 +187,21 @@ public class Shop {
 		do {
 			Scanner scanner = new Scanner(System.in);
 			System.out.println("Introduzca numero de empleado: ");
-			int employeeId = scanner.nextInt();
+			int employeeId = 0;
+			// Manejo de entrada robusto para el ID de empleado
+			if (scanner.hasNextInt()) {
+			    employeeId = scanner.nextInt();
+			} else {
+			    scanner.next(); // Limpiar el buffer
+			    continue;
+			}
 
 			System.out.println("Introduzca contraseña: ");
 			String password = scanner.next();
+			
+			// NOTA: Aquí se debería usar el DAO para autenticar:
+			// Employee loggedEmployee = dao.getEmployee(employeeId, password);
+			// logged = (loggedEmployee != null);
 
 			logged = employee.login(employeeId, password);
 			if (logged) {
@@ -181,21 +217,18 @@ public class Shop {
 	 * load initial inventory to shop
 	 */
 	public void loadInventory() {
-//		addProduct(new Product("Manzana", new Amount(10.00), true, 10));
-//		addProduct(new Product("Pera", new Amount(20.00), true, 20));
-//		addProduct(new Product("Hamburguesa", new Amount(30.00), true, 30));
-//		addProduct(new Product("Fresa", new Amount(5.00), true, 20));
-		this.readInventory();
+		// Los productos se cargan de la base de datos
+		this.readInventory(); 
 	}
 
 	/**
-	 * read inventory from file
+	 * read inventory from DB using DAO
 	 */
 	private void readInventory() {
-		this.inventory = dao.getInventory();
+		this.inventory = (ArrayList<Product>) dao.getInventory();
 	}
 	/**
-	 * write inventory
+	 * write inventory (now writes to DB via DAO - Historical Export)
 	 */
 	public boolean writeInventory() {
 		return dao.writeInventory(inventory);
@@ -207,9 +240,52 @@ public class Shop {
 	private void showCash() {
 		System.out.println("Dinero actual: " + cash);
 	}
+	
+	/**
+	 * Invoca al DAO para actualizar un producto en la base de datos.
+	 * @param product El producto con los datos actualizados.
+	 * @return El producto actualizado si la operación fue exitosa, o null si falló.
+	 */
+	public Product updateProduct(Product product) {
+		return dao.updateProduct(product);
+	}
 
 	/**
-	 * add a new product to inventory getting data from console
+	 * Invoca al DAO para eliminar un producto de la base de datos por su ID.
+	 * @param id El ID del producto a eliminar.
+	 * @return El número de filas afectadas (1 si se eliminó, 0 si no se encontró o falló).
+	 */
+	public int deleteProduct(int id) {
+		return dao.deleteProduct(id);
+	}
+	
+	/**
+	 * Encapsula la lógica de añadir un producto. Llama al DAO para insertar en BD.
+     * El método ahora devuelve el objeto Product con el ID de la BD.
+	 * * @param product El producto a insertar.
+	 * @return El producto con el ID asignado por la BD, o null si falló.
+	 */
+	public Product addProduct(Product product) {
+		if (isInventoryFull()) {
+			System.out.println("No se pueden añadir más productos");
+			return null;
+		}
+		
+		// 1. Insertar en la base de datos y obtener el objeto actualizado con el ID de la BD
+		Product insertedProduct = dao.addProduct(product); 
+		
+		if (insertedProduct != null) {
+			// 2. Añadir a la lista en memoria SOLO si fue exitoso en la BD
+			inventory.add(insertedProduct); 
+			numberProducts++;
+			return insertedProduct;
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * add a new product to inventory getting data from console (método sin argumentos)
 	 */
 	public void addProduct() {
 		if (isInventoryFull()) {
@@ -223,12 +299,26 @@ public class Shop {
 		double wholesalerPrice = scanner.nextDouble();
 		System.out.print("Stock: ");
 		int stock = scanner.nextInt();
+		
+		// Determinamos la disponibilidad al crear el producto
+		boolean available = stock > 0;
 
-		addProduct(new Product(name, new Amount(wholesalerPrice), true, stock));
+		Product newProduct = new Product(name, new Amount(wholesalerPrice), available, stock);
+		
+		// Usamos el método encapsulado y actualizado addProduct(Product)
+		Product insertedProduct = this.addProduct(newProduct); 
+		
+		if (insertedProduct != null) {
+			System.out.println("Producto añadido con éxito y guardado en la BD. ID: " + insertedProduct.getId());
+		} else {
+			System.out.println("Error al guardar el producto en la base de datos.");
+		}
 	}
+
 
 	/**
 	 * remove a new product to inventory getting data from console
+	 * (Refactorizado para usar el método deleteProduct(id) encapsulado)
 	 */
 	public void removeProduct() {
 		if (inventory.size() == 0) {
@@ -241,12 +331,19 @@ public class Shop {
 		Product product = findProduct(name);
 
 		if (product != null) {
-			// remove it
-			if (inventory.remove(product)) {
-				System.out.println("El producto " + name + " ha sido eliminado");
-
+			// 1. Eliminar de la base de datos usando el método encapsulado
+			int deletedRows = deleteProduct(product.getId()); 
+			
+			if (deletedRows > 0) {
+				// 2. Si la eliminación en BD fue exitosa, eliminar de la lista en memoria
+				if (inventory.remove(product)) {
+					numberProducts--; // Mantener el conteo consistente
+					System.out.println("El producto " + name + " ha sido eliminado (BD y memoria).");
+				} else {
+					System.out.println("Advertencia: Eliminado de BD pero fallo al eliminar de la memoria.");
+				}
 			} else {
-				System.out.println("No se ha encontrado el producto con nombre " + name);
+				System.out.println("Error: No se pudo eliminar el producto " + name + " de la base de datos.");
 			}
 		} else {
 			System.out.println("No se ha encontrado el producto con nombre " + name);
@@ -254,7 +351,7 @@ public class Shop {
 	}
 
 	/**
-	 * add stock for a specific product
+	 * add stock for a specific product (updates the database)
 	 */
 	public void addStock() {
 		Scanner scanner = new Scanner(System.in);
@@ -266,14 +363,28 @@ public class Shop {
 			// ask for stock
 			System.out.print("Seleccione la cantidad a añadir: ");
 			int stock = scanner.nextInt();
-			// update stock product
-			product.setStock(product.getStock() + stock);
-			System.out.println("El stock del producto " + name + " ha sido actualizado a " + product.getStock());
+			
+			// 1. Actualizar stock en memoria
+			int newStock = product.getStock() + stock;
+			product.setStock(newStock);
+			
+			// 2. Actualizar disponibilidad si el stock pasa de 0 a > 0
+			if (newStock > 0 && !product.isAvailable()) {
+			    product.setAvailable(true);
+			}
 
+			Product updatedProduct = updateProduct(product);
+			
+			if (updatedProduct != null) {
+			    System.out.println("El stock del producto " + name + " ha sido actualizado a " + product.getStock() + " (BD y memoria).");
+			} else {
+			    System.out.println("Error al actualizar el stock del producto " + name + " en la base de datos.");
+			}
 		} else {
 			System.out.println("No se ha encontrado el producto con nombre " + name);
 		}
 	}
+
 
 	/**
 	 * set a product as expired
@@ -288,6 +399,8 @@ public class Shop {
 		if (product != null) {
 			product.expire();
 			System.out.println("El precio del producto " + name + " ha sido actualizado a " + product.getPublicPrice());
+			
+			//Product updatedProduct = updateProduct(product);
 		}
 	}
 
@@ -314,7 +427,6 @@ public class Shop {
 		Client client = new Client(nameClient);
 
 		// sale product until input name is not 0
-		// Product[] shoppingCart = new Product[10];
 		ArrayList<Product> shoppingCart = new ArrayList<Product>();
 		int numberShopping = 0;
 
@@ -333,14 +445,26 @@ public class Shop {
 			if (product != null && product.isAvailable()) {
 				productAvailable = true;
 				totalAmount.setValue(totalAmount.getValue() + product.getPublicPrice().getValue());
+				
+				// 1. Actualizar stock en memoria
 				product.setStock(product.getStock() - 1);
+				
 				shoppingCart.add(product);
 				numberShopping++;
-				// if no more stock, set as not available to sale
+				
+				// 2. Si no queda stock, marcar como no disponible
 				if (product.getStock() == 0) {
 					product.setAvailable(false);
 				}
-				System.out.println("Producto añadido con éxito");
+				
+				// 3. Persistir el cambio de stock/disponibilidad en la BD
+				Product updatedProduct = updateProduct(product);
+				
+				if (updatedProduct != null) {
+					System.out.println("Producto añadido con éxito");
+				} else {
+					System.out.println("Error: Producto añadido en memoria, pero falló la actualización en la BD.");
+				}
 			}
 
 			if (!productAvailable) {
@@ -355,7 +479,6 @@ public class Shop {
 		// make payment
 		if (!client.pay(totalAmount)) {
 			System.out.println("Cliente debe: " + client.getBalance());
-			;
 		}
 
 		// create sale
@@ -459,20 +582,6 @@ public class Shop {
 	}
 
 	/**
-	 * add a product to inventory
-	 * 
-	 * @param product
-	 */
-	public void addProduct(Product product) {
-		if (isInventoryFull()) {
-			System.out.println("No se pueden añadir más productos, se ha alcanzado el máximo de " + inventory.size());
-			return;
-		}
-		inventory.add(product);
-		numberProducts++;
-	}
-
-	/**
 	 * check if inventory is full or not
 	 */
 	public boolean isInventoryFull() {
@@ -486,8 +595,7 @@ public class Shop {
 
 	/**
 	 * find product by name
-	 * 
-	 * @param product name
+	 * * @param product name
 	 */
 	public Product findProduct(String name) {
 		for (int i = 0; i < inventory.size(); i++) {

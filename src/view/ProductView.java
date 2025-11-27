@@ -33,19 +33,6 @@ public class ProductView extends JDialog implements ActionListener{
 	private final JPanel contentPanel = new JPanel();
 
 	/**
-	 * Launch the application.
-	 */
-//	public static void main(String[] args) {
-//		try {
-//			ProductView dialog = new ProductView();
-//			dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-//			dialog.setVisible(true);
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//	}
-
-	/**
 	 * Create the dialog.
 	 */
 	public ProductView(Shop shop, int option) {
@@ -151,7 +138,6 @@ public class ProductView extends JDialog implements ActionListener{
 			Product product;
 			switch (this.option) {
 			case Constants.OPTION_ADD_PRODUCT:
-				// check product does not exist
 				product = shop.findProduct(textFieldName.getText());
 				
 				if (product != null) {
@@ -159,21 +145,30 @@ public class ProductView extends JDialog implements ActionListener{
 							JOptionPane.ERROR_MESSAGE);
 					
 				} else {
+					int stock = Integer.parseInt(textFieldStock.getText());
+					boolean available = stock > 0;
+					
 					product = new Product(textFieldName.getText(), 
 							new Amount(Double.parseDouble(textFieldPrice.getText())) ,
-							true,
-							Integer.parseInt(textFieldStock.getText()));
-					shop.addProduct(product);
-					JOptionPane.showMessageDialog(null, "Producto añadido ", "Information",
-							JOptionPane.INFORMATION_MESSAGE);
-					// release current screen
-					dispose();	
+							available,
+							stock);
+							
+					Product insertedProduct = shop.addProduct(product); 
+					
+					if (insertedProduct != null) {
+						JOptionPane.showMessageDialog(null, "Producto añadido ", "Information",
+								JOptionPane.INFORMATION_MESSAGE);
+						dispose();
+					} else {
+						JOptionPane.showMessageDialog(null, "Error al guardar el producto en la base de datos.", "Error",
+								JOptionPane.ERROR_MESSAGE);
+					}
 				}
 				
 				break;
 				
 			case Constants.OPTION_ADD_STOCK:
-				// check product exists
+				// check if product exists
 				product = shop.findProduct(textFieldName.getText());
 				
 				if (product == null) {
@@ -181,17 +176,30 @@ public class ProductView extends JDialog implements ActionListener{
 							JOptionPane.ERROR_MESSAGE);
 					
 				} else {					
-					product.setStock(product.getStock() + Integer.parseInt(textFieldStock.getText()));
-					JOptionPane.showMessageDialog(null, "Stock actualizado ", "Information",
-							JOptionPane.INFORMATION_MESSAGE);
-					// release current screen
-					dispose();	
+					int stockToAdd = Integer.parseInt(textFieldStock.getText());
+					int newStock = product.getStock() + stockToAdd;
+					product.setStock(newStock);
+					
+					if (newStock > 0 && !product.isAvailable()) {
+					    product.setAvailable(true);
+					}
+					
+					Product updatedProduct = shop.updateProduct(product);
+					
+					if (updatedProduct != null) {
+						JOptionPane.showMessageDialog(null, "Stock actualizado ", "Information",
+								JOptionPane.INFORMATION_MESSAGE);
+						dispose();
+					} else {
+						JOptionPane.showMessageDialog(null, "Error al actualizar el stock en la base de datos.", "Error",
+								JOptionPane.ERROR_MESSAGE);
+					}
 				}
 				
 				break;
 				
 			case Constants.OPTION_REMOVE_PRODUCT:
-				// check product exists
+				// check if product exists
 				product = shop.findProduct(textFieldName.getText());
 				
 				if (product == null) {
@@ -199,11 +207,17 @@ public class ProductView extends JDialog implements ActionListener{
 							JOptionPane.ERROR_MESSAGE);
 					
 				} else {					
-					shop.getInventory().remove(product);
-					JOptionPane.showMessageDialog(null, "Producto eliminado", "Information",
-							JOptionPane.INFORMATION_MESSAGE);
-					// release current screen
-					dispose();	
+					int deletedRows = shop.deleteProduct(product.getId()); 
+					
+					if (deletedRows > 0) {
+						shop.getInventory().remove(product);
+						JOptionPane.showMessageDialog(null, "Producto eliminado", "Information",
+								JOptionPane.INFORMATION_MESSAGE);
+						dispose();	
+					} else {
+						JOptionPane.showMessageDialog(null, "Error: No se pudo eliminar el producto de la base de datos.", "Error",
+								JOptionPane.ERROR_MESSAGE);
+					}
 				}
 				
 				break;
