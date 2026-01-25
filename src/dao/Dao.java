@@ -17,9 +17,9 @@ public interface Dao {
 	
 	public boolean writeInventory(ArrayList<Product> products);
 
-	public Product addProduct (Product product);
+	public void addProduct (Product product);
 	
-	public Product updateProduct(Product product);
+	public void updateProduct(Product product);
 	
-	public int deleteProduct (int id);
+	public void deleteProduct (int id);
 }

@@ -133,105 +133,54 @@ public class ProductView extends JDialog implements ActionListener{
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		// TODO Auto-generated method stub
-		if (e.getSource() == okButton) {
-			Product product;
-			switch (this.option) {
-			case Constants.OPTION_ADD_PRODUCT:
-				product = shop.findProduct(textFieldName.getText());
-				
-				if (product != null) {
-					JOptionPane.showMessageDialog(null, "Producto ya existe ", "Error",
-							JOptionPane.ERROR_MESSAGE);
-					
-				} else {
-					int stock = Integer.parseInt(textFieldStock.getText());
-					boolean available = stock > 0;
-					
-					product = new Product(textFieldName.getText(), 
-							new Amount(Double.parseDouble(textFieldPrice.getText())) ,
-							available,
-							stock);
-							
-					Product insertedProduct = shop.addProduct(product); 
-					
-					if (insertedProduct != null) {
-						JOptionPane.showMessageDialog(null, "Producto añadido ", "Information",
-								JOptionPane.INFORMATION_MESSAGE);
-						dispose();
-					} else {
-						JOptionPane.showMessageDialog(null, "Error al guardar el producto en la base de datos.", "Error",
-								JOptionPane.ERROR_MESSAGE);
-					}
-				}
-				
-				break;
-				
-			case Constants.OPTION_ADD_STOCK:
-				// check if product exists
-				product = shop.findProduct(textFieldName.getText());
-				
-				if (product == null) {
-					JOptionPane.showMessageDialog(null, "Producto no existe ", "Error",
-							JOptionPane.ERROR_MESSAGE);
-					
-				} else {					
-					int stockToAdd = Integer.parseInt(textFieldStock.getText());
-					int newStock = product.getStock() + stockToAdd;
-					product.setStock(newStock);
-					
-					if (newStock > 0 && !product.isAvailable()) {
-					    product.setAvailable(true);
-					}
-					
-					Product updatedProduct = shop.updateProduct(product);
-					
-					if (updatedProduct != null) {
-						JOptionPane.showMessageDialog(null, "Stock actualizado ", "Information",
-								JOptionPane.INFORMATION_MESSAGE);
-						dispose();
-					} else {
-						JOptionPane.showMessageDialog(null, "Error al actualizar el stock en la base de datos.", "Error",
-								JOptionPane.ERROR_MESSAGE);
-					}
-				}
-				
-				break;
-				
-			case Constants.OPTION_REMOVE_PRODUCT:
-				// check if product exists
-				product = shop.findProduct(textFieldName.getText());
-				
-				if (product == null) {
-					JOptionPane.showMessageDialog(null, "Producto no existe ", "Error",
-							JOptionPane.ERROR_MESSAGE);
-					
-				} else {					
-					int deletedRows = shop.deleteProduct(product.getId()); 
-					
-					if (deletedRows > 0) {
-						shop.getInventory().remove(product);
-						JOptionPane.showMessageDialog(null, "Producto eliminado", "Information",
-								JOptionPane.INFORMATION_MESSAGE);
-						dispose();	
-					} else {
-						JOptionPane.showMessageDialog(null, "Error: No se pudo eliminar el producto de la base de datos.", "Error",
-								JOptionPane.ERROR_MESSAGE);
-					}
-				}
-				
-				break;
+	    if (e.getSource() == okButton) {
+	        Product product;
+	        switch (this.option) {
+	            case Constants.OPTION_ADD_PRODUCT:
+	                product = shop.findProduct(textFieldName.getText());
+	                if (product != null) {
+	                    JOptionPane.showMessageDialog(null, "Producto ya existe", "Error", JOptionPane.ERROR_MESSAGE);
+	                } else {
+	                    int stock = Integer.parseInt(textFieldStock.getText());
+	                    product = new Product(textFieldName.getText(), 
+	                                new Amount(Double.parseDouble(textFieldPrice.getText())), 
+	                                stock > 0, stock);
+	                    
+	                    shop.addProduct(product); // Llamada al método void
+	                    JOptionPane.showMessageDialog(null, "Producto añadido con éxito");
+	                    dispose();
+	                }
+	                break;
 
-			default:
-				break;
-			}
-			
-		}
-		
-		if (e.getSource() == cancelButton) {
-			// release current screen
-			dispose();			
-		}		
+	            case Constants.OPTION_ADD_STOCK:
+	                product = shop.findProduct(textFieldName.getText());
+	                if (product == null) {
+	                    JOptionPane.showMessageDialog(null, "Producto no existe", "Error", JOptionPane.ERROR_MESSAGE);
+	                } else {
+	                    int stockToAdd = Integer.parseInt(textFieldStock.getText());
+	                    product.setStock(product.getStock() + stockToAdd);
+	                    if (product.getStock() > 0) product.setAvailable(true);
+	                    
+	                    shop.updateProduct(product); // Llamada al método void
+	                    JOptionPane.showMessageDialog(null, "Stock actualizado");
+	                    dispose();
+	                }
+	                break;
+
+	            case Constants.OPTION_REMOVE_PRODUCT:
+	                product = shop.findProduct(textFieldName.getText());
+	                if (product == null) {
+	                    JOptionPane.showMessageDialog(null, "Producto no existe", "Error", JOptionPane.ERROR_MESSAGE);
+	                } else {
+	                    shop.deleteProduct(product.getId()); // Llamada al método void
+	                    shop.getInventory().remove(product); // Borramos de la lista local
+	                    JOptionPane.showMessageDialog(null, "Producto eliminado");
+	                    dispose();
+	                }
+	                break;
+	        }
+	    }
+	    if (e.getSource() == cancelButton) dispose();
 	}
 
 }

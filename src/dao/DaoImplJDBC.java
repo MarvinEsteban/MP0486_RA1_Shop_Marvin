@@ -130,7 +130,7 @@ public class DaoImplJDBC implements Dao {
          String createTableSQL = "CREATE TABLE IF NOT EXISTS " + HISTORICAL_TABLE + " (" +
             "`id` INT PRIMARY KEY NOT NULL AUTO_INCREMENT," +
             "`id_product` INT NOT NULL," +
-            "`productName` VARCHAR(25) NOT NULL," +
+            "`name` VARCHAR(25) NOT NULL," +
             "`wholesalerPrice` DOUBLE(5,2) NOT NULL," +
             "`available` TINYINT(1) NOT NULL," +
             "`stock` INT NOT NULL," +
@@ -222,12 +222,11 @@ public class DaoImplJDBC implements Dao {
 	 * actualizado con el ID generado por la BD.
 	 */
 	@Override
-	public Product addProduct(Product product) {
+	public void addProduct(Product product) {
 		String query = "INSERT INTO " + PRODUCT_TABLE + " (name, wholesalerPrice, available, stock) VALUES (?, ?, ?, ?)";
 
 		if (connection == null) {
 			System.err.println("Error: Conexión no activa para añadir producto.");
-			return null;
 		}
 
 		// Usamos Statement.RETURN_GENERATED_KEYS para obtener el ID recién creado
@@ -251,18 +250,15 @@ public class DaoImplJDBC implements Dao {
 
 					System.out.println(
 							"Producto '" + product.getName() + "' añadido con éxito. ID generado: " + generatedId);
-					return product;
 				} else {
 					System.out.println(
 							"Producto '" + product.getName() + "' añadido con éxito, pero no se pudo obtener el ID.");
-					return product;
 				}
 			}
 
 		} catch (SQLException e) {
 			System.err.println("Error al añadir producto en la base de datos.");
 			e.printStackTrace();
-			return null;
 		}
 	}
 
@@ -270,12 +266,12 @@ public class DaoImplJDBC implements Dao {
 	 * Actualiza los campos de un producto existente en la base de datos.
 	 */
 	@Override
-	public Product updateProduct(Product product) {
+	public void updateProduct(Product product) {
 		String query = "UPDATE " + PRODUCT_TABLE + " SET name=?, wholesalerPrice=?, available=?, stock=? WHERE id=?";
 
 		if (connection == null) {
 			System.err.println("Error: Conexión no activa para actualizar producto.");
-			return null;
+			
 		}
 
 		try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -290,17 +286,17 @@ public class DaoImplJDBC implements Dao {
 
 			if (affectedRows > 0) {
 				System.out.println("Producto con ID " + product.getId() + " actualizado correctamente.");
-				return product;
+				
 			} else {
 				System.out.println(
 						"Advertencia: No se encontró el producto con ID " + product.getId() + " para actualizar.");
-				return null;
+				
 			}
 
 		} catch (SQLException e) {
 			System.err.println("Error al actualizar el producto en la base de datos.");
 			e.printStackTrace();
-			return null;
+			
 		}
 	}
 
@@ -308,12 +304,12 @@ public class DaoImplJDBC implements Dao {
 	 * Elimina un producto de la base de datos usando su ID.
 	 */
 	@Override
-	public int deleteProduct(int id) {
+	public void deleteProduct(int id) {
 		String query = "DELETE FROM " + PRODUCT_TABLE + " WHERE id = ?";
 
 		if (connection == null) {
 			System.err.println("Error: Conexión no activa para eliminar producto.");
-			return 0;
+			
 		}
 
 		try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -328,12 +324,11 @@ public class DaoImplJDBC implements Dao {
 				System.out.println("Advertencia: No se encontró el producto con ID " + id + " para eliminar.");
 			}
 
-			return affectedRows; 
-
+		
 		} catch (SQLException e) {
 			System.err.println("Error al eliminar el producto con ID " + id + " de la base de datos.");
 			e.printStackTrace();
-			return 0;
+		
 		}
 	}
 

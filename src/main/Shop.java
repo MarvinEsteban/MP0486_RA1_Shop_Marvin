@@ -7,6 +7,7 @@ import model.Client;
 import model.Employee;
 import dao.Dao; // Importamos la interfaz
 import dao.DaoImplJDBC; // Importamos la implementación JDBC
+import dao.DaoImplHibernate; //Importamos la implementación Hibernate
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -33,7 +34,7 @@ public class Shop {
 		sales = new ArrayList<Sale>();
 		
 		// Inicializar con la implementación JDBC
-		dao = new DaoImplJDBC(); 
+		dao = new DaoImplHibernate(); 
 		dao.connect(); 
 	}
 
@@ -231,7 +232,15 @@ public class Shop {
 	 * write inventory (now writes to DB via DAO - Historical Export)
 	 */
 	public boolean writeInventory() {
-		return dao.writeInventory(inventory);
+	    boolean success = dao.writeInventory(inventory);
+	    
+	    if (success) {
+	        System.out.println("✅ Historial exportado con éxito a la base de datos.");
+	    } else {
+	        System.out.println("❌ Error: No se pudo guardar el historial.");
+	    }
+	    
+	    return success;
 	}
 
 	/**
@@ -246,8 +255,8 @@ public class Shop {
 	 * @param product El producto con los datos actualizados.
 	 * @return El producto actualizado si la operación fue exitosa, o null si falló.
 	 */
-	public Product updateProduct(Product product) {
-		return dao.updateProduct(product);
+	public void updateProduct(Product product) {
+		dao.updateProduct(product);
 	}
 
 	/**
@@ -255,8 +264,8 @@ public class Shop {
 	 * @param id El ID del producto a eliminar.
 	 * @return El número de filas afectadas (1 si se eliminó, 0 si no se encontró o falló).
 	 */
-	public int deleteProduct(int id) {
-		return dao.deleteProduct(id);
+	public void deleteProduct(int id) {
+		dao.deleteProduct(id);
 	}
 	
 	/**
@@ -265,54 +274,46 @@ public class Shop {
 	 * * @param product El producto a insertar.
 	 * @return El producto con el ID asignado por la BD, o null si falló.
 	 */
-	public Product addProduct(Product product) {
-		if (isInventoryFull()) {
-			System.out.println("No se pueden añadir más productos");
-			return null;
-		}
-		
-		// 1. Insertar en la base de datos y obtener el objeto actualizado con el ID de la BD
-		Product insertedProduct = dao.addProduct(product); 
-		
-		if (insertedProduct != null) {
-			// 2. Añadir a la lista en memoria SOLO si fue exitoso en la BD
-			inventory.add(insertedProduct); 
-			numberProducts++;
-			return insertedProduct;
-		} else {
-			return null;
-		}
+	public void addProduct(Product product) {
+	    if (isInventoryFull()) {
+	        System.out.println("No se pueden añadir más productos");
+	        return; // Eliminamos el 'null' porque ahora es void
+	    }
+	    
+	    // 1. Llamamos al DAO (que ahora es void)
+	    dao.addProduct(product); 
+	    
+	    // 2. Añadimos a la lista en memoria. 
+	    // 'product' ya tiene el ID actualizado gracias a Hibernate
+	    inventory.add(product); 
+	    numberProducts++;
 	}
 	
 	/**
 	 * add a new product to inventory getting data from console (método sin argumentos)
 	 */
 	public void addProduct() {
-		if (isInventoryFull()) {
-			System.out.println("No se pueden añadir más productos");
-			return;
-		}
-		Scanner scanner = new Scanner(System.in);
-		System.out.print("Nombre: ");
-		String name = scanner.nextLine();
-		System.out.print("Precio mayorista: ");
-		double wholesalerPrice = scanner.nextDouble();
-		System.out.print("Stock: ");
-		int stock = scanner.nextInt();
-		
-		// Determinamos la disponibilidad al crear el producto
-		boolean available = stock > 0;
+	    if (isInventoryFull()) {
+	        System.out.println("No se pueden añadir más productos");
+	        return;
+	    }
+	    Scanner scanner = new Scanner(System.in);
+	    System.out.print("Nombre: ");
+	    String name = scanner.nextLine();
+	    System.out.print("Precio mayorista: ");
+	    double wholesalerPrice = scanner.nextDouble();
+	    System.out.print("Stock: ");
+	    int stock = scanner.nextInt();
+	    
+	    boolean available = stock > 0;
 
-		Product newProduct = new Product(name, new Amount(wholesalerPrice), available, stock);
-		
-		// Usamos el método encapsulado y actualizado addProduct(Product)
-		Product insertedProduct = this.addProduct(newProduct); 
-		
-		if (insertedProduct != null) {
-			System.out.println("Producto añadido con éxito y guardado en la BD. ID: " + insertedProduct.getId());
-		} else {
-			System.out.println("Error al guardar el producto en la base de datos.");
-		}
+	    Product newProduct = new Product(name, new Amount(wholesalerPrice), available, stock);
+	    
+	    // Llamamos al método que acabamos de ajustar
+	    this.addProduct(newProduct); 
+	    
+	    // Si el programa llega aquí sin lanzar excepción, es que ha ido bien
+	    System.out.println("Producto añadido con éxito. ID asignado: " + newProduct.getId());
 	}
 
 
@@ -320,69 +321,65 @@ public class Shop {
 	 * remove a new product to inventory getting data from console
 	 * (Refactorizado para usar el método deleteProduct(id) encapsulado)
 	 */
+	/**
+	 * remove a product from inventory getting data from console
+	 */
 	public void removeProduct() {
-		if (inventory.size() == 0) {
-			System.out.println("No se pueden eliminar productos, inventario vacio");
-			return;
-		}
-		Scanner scanner = new Scanner(System.in);
-		System.out.print("Seleccione un nombre de producto: ");
-		String name = scanner.next();
-		Product product = findProduct(name);
+	    if (inventory.size() == 0) {
+	        System.out.println("No se pueden eliminar productos, inventario vacío");
+	        return;
+	    }
+	    
+	    Scanner scanner = new Scanner(System.in);
+	    System.out.print("Seleccione el nombre del producto a eliminar: ");
+	    String name = scanner.next();
+	    Product product = findProduct(name);
 
-		if (product != null) {
-			// 1. Eliminar de la base de datos usando el método encapsulado
-			int deletedRows = deleteProduct(product.getId()); 
-			
-			if (deletedRows > 0) {
-				// 2. Si la eliminación en BD fue exitosa, eliminar de la lista en memoria
-				if (inventory.remove(product)) {
-					numberProducts--; // Mantener el conteo consistente
-					System.out.println("El producto " + name + " ha sido eliminado (BD y memoria).");
-				} else {
-					System.out.println("Advertencia: Eliminado de BD pero fallo al eliminar de la memoria.");
-				}
-			} else {
-				System.out.println("Error: No se pudo eliminar el producto " + name + " de la base de datos.");
-			}
-		} else {
-			System.out.println("No se ha encontrado el producto con nombre " + name);
-		}
+	    if (product != null) {
+	        // 1. Eliminamos de la base de datos usando el ID
+	        dao.deleteProduct(product.getId()); 
+	        
+	        // 2. Eliminamos de la lista en memoria para que no aparezca más
+	        if (inventory.remove(product)) {
+	            numberProducts--; 
+	            System.out.println("El producto " + name + " ha sido eliminado.");
+	        }
+	    } else {
+	        System.out.println("No se ha encontrado el producto con nombre " + name);
+	    }
 	}
 
 	/**
 	 * add stock for a specific product (updates the database)
 	 */
 	public void addStock() {
-		Scanner scanner = new Scanner(System.in);
-		System.out.print("Seleccione un nombre de producto: ");
-		String name = scanner.next();
-		Product product = findProduct(name);
+	    Scanner scanner = new Scanner(System.in);
+	    System.out.print("Seleccione un nombre de producto: ");
+	    String name = scanner.next();
+	    Product product = findProduct(name);
 
-		if (product != null) {
-			// ask for stock
-			System.out.print("Seleccione la cantidad a añadir: ");
-			int stock = scanner.nextInt();
-			
-			// 1. Actualizar stock en memoria
-			int newStock = product.getStock() + stock;
-			product.setStock(newStock);
-			
-			// 2. Actualizar disponibilidad si el stock pasa de 0 a > 0
-			if (newStock > 0 && !product.isAvailable()) {
-			    product.setAvailable(true);
-			}
+	    if (product != null) {
+	        System.out.print("Seleccione la cantidad a añadir: ");
+	        int stock = scanner.nextInt();
+	        
+	        // 1. Actualizar stock en memoria
+	        int newStock = product.getStock() + stock;
+	        product.setStock(newStock);
+	        
+	        // 2. Actualizar disponibilidad si el stock pasa de 0 a > 0
+	        if (newStock > 0 && !product.isAvailable()) {
+	            product.setAvailable(true);
+	        }
 
-			Product updatedProduct = updateProduct(product);
-			
-			if (updatedProduct != null) {
-			    System.out.println("El stock del producto " + name + " ha sido actualizado a " + product.getStock() + " (BD y memoria).");
-			} else {
-			    System.out.println("Error al actualizar el stock del producto " + name + " en la base de datos.");
-			}
-		} else {
-			System.out.println("No se ha encontrado el producto con nombre " + name);
-		}
+	        // 3. CAMBIO AQUÍ: Llamamos al método void directamente
+	        updateProduct(product);
+	        
+	        
+	        System.out.println("El stock del producto " + name + " ha sido actualizado a " + product.getStock() + " (BD y memoria).");
+	        
+	    } else {
+	        System.out.println("No se ha encontrado el producto con nombre " + name);
+	    }
 	}
 
 
@@ -420,76 +417,63 @@ public class Shop {
 	 * make a sale of products to a client
 	 */
 	public void sale() {
-		// ask for client name
-		Scanner sc = new Scanner(System.in);
-		System.out.println("Realizar venta, escribir nombre cliente");
-		String nameClient = sc.nextLine();
-		Client client = new Client(nameClient);
+	    // ask for client name
+	    Scanner sc = new Scanner(System.in);
+	    System.out.println("Realizar venta, escribir nombre cliente");
+	    String nameClient = sc.nextLine();
+	    Client client = new Client(nameClient);
 
-		// sale product until input name is not 0
-		ArrayList<Product> shoppingCart = new ArrayList<Product>();
-		int numberShopping = 0;
+	    // sale product until input name is not 0
+	    ArrayList<Product> shoppingCart = new ArrayList<Product>();
+	    int numberShopping = 0;
 
-		Amount totalAmount = new Amount(0.0);
-		String name = "";
-		while (!name.equals("0")) {
-			System.out.println("Introduce el nombre del producto, escribir 0 para terminar:");
-			name = sc.nextLine();
+	    Amount totalAmount = new Amount(0.0);
+	    String name = "";
+	    while (!name.equals("0")) {
+	        System.out.println("Introduce el nombre del producto, escribir 0 para terminar:");
+	        name = sc.nextLine();
 
-			if (name.equals("0")) {
-				break;
-			}
-			Product product = findProduct(name);
-			boolean productAvailable = false;
+	        if (name.equals("0")) {
+	            break;
+	        }
+	        Product product = findProduct(name);
+	        boolean productAvailable = false;
 
-			if (product != null && product.isAvailable()) {
-				productAvailable = true;
-				totalAmount.setValue(totalAmount.getValue() + product.getPublicPrice().getValue());
-				
-				// 1. Actualizar stock en memoria
-				product.setStock(product.getStock() - 1);
-				
-				shoppingCart.add(product);
-				numberShopping++;
-				
-				// 2. Si no queda stock, marcar como no disponible
-				if (product.getStock() == 0) {
-					product.setAvailable(false);
-				}
-				
-				// 3. Persistir el cambio de stock/disponibilidad en la BD
-				Product updatedProduct = updateProduct(product);
-				
-				if (updatedProduct != null) {
-					System.out.println("Producto añadido con éxito");
-				} else {
-					System.out.println("Error: Producto añadido en memoria, pero falló la actualización en la BD.");
-				}
-			}
+	        if (product != null && product.isAvailable()) {
+	            productAvailable = true;
+	            totalAmount.setValue(totalAmount.getValue() + product.getPublicPrice().getValue());
+	            
+	            // 1. Actualizar stock en memoria
+	            product.setStock(product.getStock() - 1);
+	            
+	            // 2. Si no queda stock, marcar como no disponible
+	            if (product.getStock() == 0) {
+	                product.setAvailable(false);
+	            }
+	            
+	            shoppingCart.add(product);
+	            numberShopping++;
+	            
+	            // 3. Persistir el cambio en la BD (Llamada al método void)
+	            updateProduct(product);
+	            
+	            System.out.println("Producto añadido con éxito al carrito.");
+	            
+	        } else {
+	            System.out.println("Producto no encontrado o sin stock");
+	        }
+	    }
 
-			if (!productAvailable) {
-				System.out.println("Producto no encontrado o sin stock");
-			}
-		}
+	    totalAmount.setValue(totalAmount.getValue() * TAX_RATE);
+	    System.out.println("Venta realizada con éxito, total: " + totalAmount);
 
-		totalAmount.setValue(totalAmount.getValue() * TAX_RATE);
-		// show cost total
-		System.out.println("Venta realizada con éxito, total: " + totalAmount);
+	    if (!client.pay(totalAmount)) {
+	        System.out.println("Cliente debe: " + client.getBalance());
+	    }
 
-		// make payment
-		if (!client.pay(totalAmount)) {
-			System.out.println("Cliente debe: " + client.getBalance());
-		}
-
-		// create sale
-		Sale sale = new Sale(client, shoppingCart, totalAmount);
-
-		// add to shop
-		sales.add(sale);
-//		numberSales++;
-
-		// add to cash
-		cash.setValue(cash.getValue() + totalAmount.getValue());
+	    Sale sale = new Sale(client, shoppingCart, totalAmount);
+	    sales.add(sale);
+	    cash.setValue(cash.getValue() + totalAmount.getValue());
 	}
 
 	/**
