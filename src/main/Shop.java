@@ -6,8 +6,9 @@ import model.Amount;
 import model.Client;
 import model.Employee;
 import dao.Dao; // Importamos la interfaz
-import dao.DaoImplJDBC; // Importamos la implementación JDBC
+//import dao.DaoImplJDBC; // Importamos la implementación JDBC
 import dao.DaoImplHibernate; //Importamos la implementación Hibernate
+import dao.DaoImplMongoDB; //Import de MongoDB
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -33,8 +34,8 @@ public class Shop {
 		inventory = new ArrayList<Product>();
 		sales = new ArrayList<Sale>();
 		
-		// Inicializar con la implementación JDBC
-		dao = new DaoImplHibernate(); 
+		// Inicializar con la implementación MongoDB
+		dao = new DaoImplMongoDB(); 
 		dao.connect(); 
 	}
 
@@ -125,9 +126,9 @@ public class Shop {
 			case 0: // CASE PARA EXPORTAR HISTORIAL
 				boolean success = shop.writeInventory();
 				if (success) {
-					System.out.println("✅ Inventario exportado correctamente a 'historical_inventory'.");
+					System.out.println("Inventario exportado correctamente a 'historical_inventory'.");
 				} else {
-					System.out.println("❌ ERROR al exportar el inventario a la base de datos.");
+					System.out.println("ERROR al exportar el inventario a la base de datos.");
 				}
 				break;
 			case 1:
@@ -199,10 +200,6 @@ public class Shop {
 
 			System.out.println("Introduzca contraseña: ");
 			String password = scanner.next();
-			
-			// NOTA: Aquí se debería usar el DAO para autenticar:
-			// Employee loggedEmployee = dao.getEmployee(employeeId, password);
-			// logged = (loggedEmployee != null);
 
 			logged = employee.login(employeeId, password);
 			if (logged) {
@@ -235,9 +232,9 @@ public class Shop {
 	    boolean success = dao.writeInventory(inventory);
 	    
 	    if (success) {
-	        System.out.println("✅ Historial exportado con éxito a la base de datos.");
+	        System.out.println("Historial exportado con éxito a la base de datos.");
 	    } else {
-	        System.out.println("❌ Error: No se pudo guardar el historial.");
+	        System.out.println("Error: No se pudo guardar el historial.");
 	    }
 	    
 	    return success;
